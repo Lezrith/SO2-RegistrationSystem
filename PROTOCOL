@@ -1,0 +1,223 @@
+Programy do komunikacji wykorzystują dwie struktury danych:
+
+Jest 5 lekarzy. Lekarze przyjmuja 3 razy dziennie o 10, 12 i 14 w dni robocze. Aby zalogować się jako lekarz należy podać imię, nazwisko i hasło.
+Imię i nazwisko lekarza 	hasło
+Ryszard Lipton			0
+Andrzej Kmicic			1
+Cezary Baryka			2
+Elżbieta Biecka			3
+Tomasz Judym			4
+
+msgbuf - służy do przesyłania większości komunikatów między procesami
+{
+  long type;
+  int subtype;
+  int id; 
+  char name[60];
+  char pesel[11]; 
+  Tdate date; 
+};
+type - definiuje odbiorcę komunikatu: 1 - rejestracja, >1 pacjent lub lekarz
+subtype - oznacza typ przeprowadzanej operacji;
+id - pid wysyłającego kod błędu lub inne dane;
+name[60] - imiona i nazwiska pancjenta lub lekarza
+pesel[11] - pesel pacjenta
+date - data, godzina lub inne dane
+
+msgbuf2 - służy wyłącznie do wysyłania grafiku wybranego lekarza do pacjenta
+{
+  long type;
+  int hours[90];
+  short appointments[30];
+};
+
+long type - definiuje odbiorcę komunikatu - wyłącznie pid pacjenta
+hours[90] - godziny przyjęć danego lekarza w miesiącu (3 dziennie)
+appointments[30] - wektor bitowy kodującu wolne godziny i-tego dnia
+
+Podtypy komunikatów:
+1 - logowanie/rejestracja pacjenta do systemu jeśli pid>0, wylogowanie w przeciwnym wypadku
+2 - prośba o/przesłanie lekarzy przyjmujących w danym dniu
+3 - prośba o/przesłanie wolnych godzin lekarzy w danym dniu
+4 - prośba o/przesłanie listy lekarzy
+5 - prośba o/przesłanie grafiku lekarza
+6 - prośba o/przesłanie statusu wizyty
+7 - prośba o/przesłanie potwierdzenia zmianiy wizyty
+8 - prośba o/przesłanie potwierdzenia anulowania wizyty
+9 - prośba o/przesłanie potwierdzenia rejestracji w ciągu 2 miesięcy
+10 - prośba o/przesłanie potwierdzenia rejestracji po 2 miesiącach
+11 - logowanie lekarza do systemu jeśli pid>0, wylogowanie w przeciwnym wypadku
+12 - prośba o/przesłanie potwierdzenia urlopiu lekarza
+13 - sygnał, że należy zmienić datę - przesyłany co +-5 sekund
+14 - prośba o potwierdzenie wizyty
+
+Scenariusze komunikacji według podtypów kompunikatów:
+
+- 1 logowanie
+Pacjent:
+	type=1
+	subtype=1
+	id=pid
+	name=imię i nazwisko wpisane prze użytkownika
+	pesel=pesel wpisane przez użytkownika
+Rejestracja:
+	type=pid
+	subtype=1
+	id=kod błędu // 0 - brak błędu, -1 - pacjent jest już zalogowany
+- 1 wylogowanie
+Pacjent:
+	type=1
+	subtype=1
+	id=-pid
+Rejestracja:
+	type=pid
+	subtype=1
+	id=kod błędu // 0 - brak błędu, -1 - pacjent nie był zalogowany
+- 2
+Pacjent:
+	type=1
+	subtype=2
+	id=pid
+	date=data podana przez użytkownika
+Rejestracja:
+	type=pid
+	subtype=1
+	id=odpowiedź // 0 - klinika jest nieczynna w tym dniu, -1 - podana data już była, -2 - podana data nie 		figuruje w grafiku
+	data=data // poprawna data jeśli wprowadzono złe dane
+lub 5x:
+	type=pid
+	subtype=1
+	id=liczba lekarzy 
+	name=nazwiska kolejnych lekarzy
+- 3
+Pacjent:
+	type=1
+	subtype=3
+	id=pid
+	date=data podana przez użytkownika
+Rejestracja:
+	type=pid
+	subtype=1
+	id=odpowiedź // 0 - klinika jest nieczynna w tym dniu, -1 - podana data już była, -2 - podana data nie 		figuruje w grafiku
+	data=data // poprawna data jeśli wprowadzono złe dane
+lub 1x+5x:
+	type=pid
+	subtype=1
+	id=liczba lekarzy, a następnie wektor bitowy oznaczający wolne godziny
+	name=nazwiska kolejnych lekarzy
+	date=godziny przyjęc lekarzy
+- 4
+Pacjent:
+	type=1
+	subtype=4
+	id=pid
+	data=data podana przez użytkownika
+Rejestracja 5x:
+	type=pid
+	subtype=1
+	id=liczba lekarzy 
+	name=nazwiska kolejnych lekarzy
+- 5
+Pacjent:
+	type=1
+	subtype=5
+	id=pid
+	data=wybrany lekarz
+Rejestracja 6x msgbuf2:
+	type=pid
+	hours=godziny przyjęć
+	appointments=wektor bitowy oznaczający wolne godziny
+- 6 
+Pacjent:
+	type=1
+	subtype=6
+	id=pid
+Rejestracja:
+	type=pid
+	subtype=6
+	id=godzina wizyty lub kod błedu //-1 - pacjent nie ma umówionej wizyty
+	date=data wizyty
+	name=imię i nazwisko lekarza
+- 7 
+Pacjent:
+	type=1
+	subtype=7
+	id=pid
+Rejestracja 2x:
+	type=pid
+	subtype=7
+	id=godzina wizyty lub kod błedu //-1 - pacjent nie ma umówionej wizyty -2 nie ma już wolnych terminów
+	date=data wizyty
+	name=imię i nazwisko lekarza
+- 8
+Pacjent:
+	type=1
+	subtype=8
+	id=pid
+Rejestracja:
+	type=pid
+	subtype=8
+	id=kod błedu //-1 - pacjent nie ma umówionej wizyty
+-9 
+Pacjent:
+	type=1
+	subtype=9
+	id=pid
+Rejestracja:
+	type=pid
+	subtype=9
+	id=godzina wizyty // >0 nowa wizyta <0 wizyta była już umówiona
+	date=data wizyty
+	name=imię i nazwisko lekarza
+-10
+Pacjent:
+	type=1
+	subtype=10
+	id=pid
+Rejestracja:
+	type=pid
+	subtype=10
+	id=godzina wizyty // >0 nowa wizyta <0 wizyta była już umówiona
+	date=data wizyty
+	name=imię i nazwisko lekarza
+- 11 logowanie
+Lekarz:
+	type=1
+	subtype=11
+	id=pid
+	name=imię i nazwisko wpisane prze użytkownika
+	pesel=pesel wpisane przez użytkownika
+Rejestracja:
+	type=pid
+	subtype=1
+	id=kod błędu // 0 - brak błędu, -1 - lekarz jest już zalogowany
+- 11 wylogowanie
+Lekarz:
+	type=1
+	subtype=11
+	id=-pid
+Rejestracja:
+	type=pid
+	subtype=1
+	id=kod błędu // 0 - brak błędu, -1 - lekarz nie był zalogowany
+- 12 
+Lekarz 2x:
+	type=1
+	subtype=12
+	id=pid
+	data=data rozpoczęcia i zakończenia urlopu
+Rejestracja:
+	type=pid
+	subtype=1
+	id=kod błędu // 0 - brak błędu, -1 - podana data już była, -2 - podana data nie figuruje w grafiku
+- 13 
+Rejestracja:
+	type=1
+	subtype=13
+- 14
+Rejestracja:
+	type=pid
+	subtype=14
+	id=godzina wizyty
+	date=data wizyty
+	name=imię i nazwisko lekarza

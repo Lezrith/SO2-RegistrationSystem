@@ -1,0 +1,16 @@
+1. Instrukcja kompilacji:
+  Do kompilacji proszę użyć polecenia make w głównym folderze projektu.
+2. Instrukcja uruchamiania:
+  Przed uruchomieniem programów pacjenta i lekarza należy uruchomić program rejestracji. Po uruchomieniu proszę postępować zgodnie z instrukcjami na ekranie oraz wpisywać dane bez błędów. Do zakończenia program rejestracji proszę użyć sygnału SIGINT. Aby zalogować się jako lekarz należy podać imię, nazwisko i hasło.
+Imię i nazwisko lekarza 	hasło
+Ryszard Lipton			0
+Andrzej Kmicic			1
+Cezary Baryka			2
+Elżbieta Biecka			3
+Tomasz Judym			4
+3. Zawartość plików .c:
+  inf122473_l.c - zawiera kod programu lekarza
+  inf122473_p.c - zawiera kod programu pacjenta
+  inf122473_r.c - zawiera kod programu rejestracji
+  inf122473_utility.c - zawiera wspólne oraz pomocnicze funkcje
+  inf122473_vector.c - zawiera kod dynamicznej struktury przechowującej dane
